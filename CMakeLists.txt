@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5.1)
 project(watercolumn_layer_tracker)
 
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++14)
 
 find_package(catkin REQUIRED COMPONENTS
     marine_acoustic_msgs

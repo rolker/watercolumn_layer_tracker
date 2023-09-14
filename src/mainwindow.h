@@ -39,6 +39,8 @@ private:
   float display_max_db_ = 0.0;
   bool use_max_ = false;
   bool use_re_noise_ = false;
+  int display_integration_count_ = 0;
+  std::string display_channel_;
 };
 
 } // namespace layer_tracker

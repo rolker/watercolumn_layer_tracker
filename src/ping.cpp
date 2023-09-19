@@ -119,6 +119,7 @@ const std::vector<Slice>& Ping::extractSlices(float min_db, float min_size, floa
     double sum = 0.0;
     auto max = values_re_noise_[i];
 
+    Slice max_slice;
     for(int j = 0; j < max_bins && i+j < values_re_noise_.size(); j++)
     {
       sum += values_re_noise_[i+j];
@@ -130,9 +131,13 @@ const std::vector<Slice>& Ping::extractSlices(float min_db, float min_size, floa
       if(bin_count >= min_bins && average >= min_db)
       {
         Slice s(i*bin_size_, (i+j)*bin_size_, average, max);
-        candidates[s] = s.score();
+        if(s.score() > max_slice.score())
+          max_slice = s;
       }
     }
+    if(max_slice.averageDB() > min_db)
+      candidates[max_slice] = max_slice.score();
+
   }
 
   slices_.clear();

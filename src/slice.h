@@ -9,6 +9,7 @@ namespace layer_tracker
 class Slice
 {
 public:
+  Slice() = default;
   Slice(float begin, float end, float average_db, float maximum_db);
 
   const float& begin() const;
@@ -23,16 +24,16 @@ public:
 
 private:
   /// distance in meters from sonar the slice begins.
-  float begin_;
+  float begin_ = 0.0;
 
   /// distance in meters from the sonar where the slice ends.
-  float end_;
+  float end_ = 0.0;
 
   /// average level above noise floor in decibels.
-  float average_db_;
+  float average_db_ = 0.0;
 
   /// maximum level above noise floor in decibels.
-  float maximum_db_;
+  float maximum_db_ = 0.0;
 };
 
 } // namespace layer_tracker

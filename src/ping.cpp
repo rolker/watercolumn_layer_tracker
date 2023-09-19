@@ -94,5 +94,68 @@ float Ping::binSize() const
   return bin_size_;
 }
 
+const std::vector<Slice>& Ping::extractSlices(float min_db, float min_size, float max_size)
+{
+  int min_bins = min_size/bin_size_;
+  int max_bins = max_size/bin_size_;
+
+  std::map<Slice, float> candidates;
+
+  bool outgoing_pulse = true;
+
+  for(int i = 0; i < values_re_noise_.size()-min_bins; i++)
+  {
+
+    if(outgoing_pulse && values_re_noise_[i]  < 5)
+      outgoing_pulse = false;
+
+    if(outgoing_pulse)
+      continue;
+
+    // bail out early if we are starting below min
+    if(values_re_noise_[i] < min_db)
+      continue;
+
+    double sum = 0.0;
+    auto max = values_re_noise_[i];
+
+    for(int j = 0; j < max_bins && i+j < values_re_noise_.size(); j++)
+    {
+      sum += values_re_noise_[i+j];
+      max = std::max(max, values_re_noise_[i+j]);
+      int bin_count = j+1;
+      float average = sum/float(bin_count);
+      if(bin_count == min_bins && average < min_db)
+        break;
+      if(bin_count >= min_bins && average >= min_db)
+      {
+        Slice s(i*bin_size_, (i+j)*bin_size_, average, max);
+        candidates[s] = s.score();
+      }
+    }
+  }
+
+  slices_.clear();
+  for(auto slice = candidates.rbegin(); slice != candidates.rend(); slice++)
+  {
+    bool overlaps = false;
+    for(auto & existing_slice: slices_)
+      if(existing_slice.overlaps(slice->first))
+      {
+        overlaps = true;
+        break;
+      }
+    if(!overlaps)
+      slices_.push_back(slice->first);
+  }
+
+  return slices_;
+}
+
+const std::vector<Slice>& Ping::slices() const
+{
+  return slices_;
+}
+
 }
 

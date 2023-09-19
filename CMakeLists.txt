@@ -35,6 +35,7 @@ set(SOURCES
     src/main.cpp
     src/mainwindow.cpp
     src/ping.cpp
+    src/slice.cpp
 )
 
 set(HEADERS

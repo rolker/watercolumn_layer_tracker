@@ -23,6 +23,7 @@ public slots:
   void openBags(const std::vector<QString> &fnames);
   void adjustScale();
   void updateEchogram();
+  void getSlices();
 
 private slots:
   void on_actionOpen_triggered();

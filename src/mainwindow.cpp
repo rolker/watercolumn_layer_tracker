@@ -5,7 +5,7 @@
 
 #include <rosbag/view.h>
 #include <QGraphicsPixmapItem>
-
+#include <QDateTime>
 #include <QDebug>
 
 namespace layer_tracker
@@ -16,6 +16,7 @@ MainWindow::MainWindow(QWidget *parent) :QMainWindow(parent)
   ui_.setupUi(this);
   scene_ = new QGraphicsScene(this);
   ui_.graphicsView->setScene(scene_);
+  ui_.graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
   connect(ui_.horizontalScaleHorizontalSlider, &QSlider::valueChanged, this, &MainWindow::adjustScale);
   connect(ui_.verticalScaleVerticalSlider, &QSlider::valueChanged, this, &MainWindow::adjustScale);
   connect(ui_.minDbLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateEchogram);
@@ -48,7 +49,9 @@ void MainWindow::adjustScale()
     auto scaley = target_box.height()/double(pixmap_item_->pixmap().height());
     scaley *= ui_.verticalScaleVerticalSlider->value()*0.01;
 
-    pixmap_item_->setTransform(QTransform::fromScale(scalex, scaley));
+    ui_.graphicsView->setTransform(QTransform::fromScale(scalex, scaley));
+
+    //pixmap_item_->setTransform(QTransform::fromScale(scalex, scaley));
   }
 
 }
@@ -76,7 +79,9 @@ void MainWindow::openBags(const std::vector<QString> &fnames)
         {
           auto topic = message.getTopic();
           marine_acoustic_msgs::RawSonarImage::ConstPtr ping = message.instantiate<marine_acoustic_msgs::RawSonarImage>();
+          qDebug() << QDateTime::fromMSecsSinceEpoch(ping->header.stamp.toSec()*1000) << topic.c_str();
           pings_by_topic[topic][ping->header.stamp] = Ping(*ping, 0.1);
+          pings_by_topic[topic][ping->header.stamp].extractSlices();
         }
       }
     }
@@ -189,6 +194,13 @@ void MainWindow::updateEchogram()
         ping_count++;
       }
       pixmap_item_ = scene_->addPixmap(QPixmap::fromImage(echogram));
+
+      float grid_spacing = 100.0/pings_by_topic[pc.first].begin()->second.binSize();
+      QPen line_pen(Qt::red, 0, Qt::DotLine);
+
+      for(float y = grid_spacing; y <= echogram.height(); y += grid_spacing)
+        scene_->addLine(0.0, y, echogram.width(), y, line_pen);
+
       adjustScale();
       break;
     }
@@ -199,6 +211,31 @@ void MainWindow::updateEchogram()
   use_re_noise_ = ui_.reNoiseCheckBox->isChecked();
   display_integration_count_ = integration_count;
   display_channel_ = channel;
+
+  getSlices();
+}
+
+void MainWindow::getSlices()
+{
+  std::string channel = ui_.channelComboBox->currentText().toStdString();
+  auto pings = pings_by_topic.find(channel);
+  if(pings == pings_by_topic.end())
+    return;
+
+  QPen slice_pen(QColor(0, 255, 0, 128), 0.5);
+  int ping_number = 0;
+  for(const auto& ping: pings->second)
+  {
+    const auto& slices = ping.second.slices();
+    for(const auto& slice: slices)
+    {
+      scene_->addLine(ping_number+.5, slice.begin()/ping.second.binSize(), ping_number+.5, slice.end()/ping.second.binSize(), slice_pen);
+
+    }
+
+    ping_number++;
+  }
+
 }
 
 } // namespace layer_tracker

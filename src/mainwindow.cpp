@@ -19,12 +19,33 @@ MainWindow::MainWindow(QWidget *parent) :QMainWindow(parent)
   ui_.graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
   connect(ui_.horizontalScaleHorizontalSlider, &QSlider::valueChanged, this, &MainWindow::adjustScale);
   connect(ui_.verticalScaleVerticalSlider, &QSlider::valueChanged, this, &MainWindow::adjustScale);
-  connect(ui_.minDbLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateEchogram);
-  connect(ui_.maxDbLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateEchogram);
-  connect(ui_.maxValuesCheckBox, &QCheckBox::stateChanged, this, &MainWindow::updateEchogram);
-  connect(ui_.reNoiseCheckBox, &QCheckBox::stateChanged, this, &MainWindow::updateEchogram);
-  connect(ui_.integrationCountLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateEchogram);
+
+  connect(ui_.minDbLineEdit, &QLineEdit::editingFinished, this, &MainWindow::UpdateEchogramIfParametersChanged);
+  connect(ui_.minDbLineEdit, &QLineEdit::textChanged, this, &MainWindow::setParametersChanged);
+
+  connect(ui_.maxDbLineEdit, &QLineEdit::editingFinished, this, &MainWindow::UpdateEchogramIfParametersChanged);
+  connect(ui_.maxDbLineEdit, &QLineEdit::textChanged, this, &MainWindow::setParametersChanged);
+
+  connect(ui_.depthLinesSpacingLineEdit, &QLineEdit::editingFinished, this, &MainWindow::UpdateEchogramIfParametersChanged);
+  connect(ui_.depthLinesSpacingLineEdit, &QLineEdit::textChanged, this, &MainWindow::setParametersChanged);
+
+  connect(ui_.sliceAlphaLineEdit, &QLineEdit::editingFinished, this, &MainWindow::UpdateEchogramIfParametersChanged);
+  connect(ui_.sliceAlphaLineEdit, &QLineEdit::textChanged, this, &MainWindow::setParametersChanged);
+
+  connect(ui_.sliceWidthLineEdit, &QLineEdit::editingFinished, this, &MainWindow::UpdateEchogramIfParametersChanged);
+  connect(ui_.sliceWidthLineEdit, &QLineEdit::textChanged, this, &MainWindow::setParametersChanged);
+
+
   connect(ui_.channelComboBox,  qOverload<int>(&QComboBox::activated), this, &MainWindow::updateEchogram);
+  connect(ui_.reNoiseCheckBox, &QCheckBox::stateChanged, this, &MainWindow::updateEchogram);
+
+
+  connect(ui_.sliceMinDbLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateSlices);
+  connect(ui_.minSizeLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateSlices);
+  connect(ui_.maxSizeLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateSlices);
+  connect(ui_.minDepthLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateSlices);
+  connect(ui_.maxDepthLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateSlices);
+
 }
 
 MainWindow::~MainWindow()
@@ -50,10 +71,7 @@ void MainWindow::adjustScale()
     scaley *= ui_.verticalScaleVerticalSlider->value()*0.01;
 
     ui_.graphicsView->setTransform(QTransform::fromScale(scalex, scaley));
-
-    //pixmap_item_->setTransform(QTransform::fromScale(scalex, scaley));
   }
-
 }
 
 void MainWindow::on_actionOpen_triggered()
@@ -78,10 +96,16 @@ void MainWindow::openBags(const std::vector<QString> &fnames)
         if (message.getDataType() == "marine_acoustic_msgs/RawSonarImage")
         {
           auto topic = message.getTopic();
+          if(ui_.channelComboBox->findText(topic.c_str()) == -1)
+            ui_.channelComboBox->insertItem(ui_.channelComboBox->count(),topic.c_str());
           marine_acoustic_msgs::RawSonarImage::ConstPtr ping = message.instantiate<marine_acoustic_msgs::RawSonarImage>();
-          qDebug() << QDateTime::fromMSecsSinceEpoch(ping->header.stamp.toSec()*1000) << topic.c_str();
-          pings_by_topic[topic][ping->header.stamp] = Ping(*ping, 0.1);
-          pings_by_topic[topic][ping->header.stamp].extractSlices();
+
+          if(!trackers_by_channel_[topic])
+          {
+            trackers_by_channel_[topic] = std::make_shared<Tracker>(bin_size_);
+            trackers_by_channel_[topic]->setLayerMinimumDepth(minimum_depth_);
+          }
+          trackers_by_channel_[topic]->addPing(*ping);
         }
       }
     }
@@ -90,22 +114,28 @@ void MainWindow::openBags(const std::vector<QString> &fnames)
       std::cerr << e.what() << '\n';
     }
   }
-  for(auto t: pings_by_topic)
-  {
-    if(ui_.channelComboBox->findText(t.first.c_str()) == -1)
-      ui_.channelComboBox->insertItem(ui_.channelComboBox->count(),t.first.c_str());
-  }
-
-  // hack to force update
-  display_integration_count_ = 0;
   updateEchogram();
+}
+
+void MainWindow::setParametersChanged()
+{
+  parameters_changed_ = true;
+}
+
+void MainWindow::UpdateEchogramIfParametersChanged()
+{
+  if(parameters_changed_)
+  {
+    parameters_changed_ = false;
+    updateEchogram();
+  }
 }
 
 void MainWindow::updateEchogram()
 {
   float min_db = -100.0;
   float max_db = 10.0;
-  int integration_count = 1;
+  float depth_lines_spacing = 100.0;
   bool ok;
   float value = ui_.minDbLineEdit->text().toFloat(&ok);
   if(ok)
@@ -113,129 +143,212 @@ void MainWindow::updateEchogram()
   value = ui_.maxDbLineEdit->text().toFloat(&ok);
   if(ok)
     max_db = value;
-  int int_val = ui_.integrationCountLineEdit->text().toInt();
-  if(ok && int_val > 0)
-    integration_count = int_val;
+  value = ui_.depthLinesSpacingLineEdit->text().toFloat();
+  if(ok && value > 0)
+    depth_lines_spacing = value;
 
   std::string channel = ui_.channelComboBox->currentText().toStdString();
 
-  if(display_min_db_ == min_db && display_max_db_ == max_db && use_max_ == ui_.maxValuesCheckBox->isChecked() && use_re_noise_ == ui_.reNoiseCheckBox->isChecked() && display_integration_count_ == integration_count && channel == display_channel_)
-    return;
   scene_->clear();
-  std::map<std::string, uint32_t> max_height_by_topic;
-  std::map<std::string, uint32_t> ping_count_by_topic;
-  for(auto& topic: pings_by_topic)
-  {
-    for(auto &p: topic.second)
-      max_height_by_topic[topic.first] = std::max<uint32_t>(max_height_by_topic[topic.first], p.second.values().size());
-    ping_count_by_topic[topic.first] = topic.second.size();
-  }
+  pixmap_item_ = nullptr;
 
-  for(auto pc: ping_count_by_topic)
+  uint32_t max_height = 0;
+  auto tracker = trackers_by_channel_.find(channel);
+  if(tracker == trackers_by_channel_.end())
+    return;
+
+  auto pings = tracker->second->pings();
+  for(const auto &p: pings)
+    max_height = std::max<uint32_t>(max_height, p->values().size());
+  uint32_t ping_count = pings.size();
+  
+  qDebug() << channel.c_str() << ping_count << "x" << max_height;
+  QImage echogram(ping_count, max_height, QImage::Format_Grayscale8);
+  echogram.fill(Qt::black);
+  uint32_t ping_number = 0;
+  for(auto p: pings)
   {
-    if(pc.first == channel)
+    std::vector<float> ranges;
+    for(int i = 0; i < p->values().size(); i++)
+      ranges.push_back(i*p->binSize());
+    
+    const std::vector<float>* values = &p->values();
+    if(ui_.reNoiseCheckBox->isChecked())
+      values = &p->valuesReBackground();
+
+    for(int i = 0; i < values->size(); i++)
     {
-      qDebug() << pc.first.c_str() << pc.second << "x" << max_height_by_topic[pc.first];
-      QImage echogram(pc.second, max_height_by_topic[pc.first], QImage::Format_Grayscale8);
-      echogram.fill(Qt::black);
-      uint32_t ping_count = 0;
-      std::deque<std::vector<float> > ping_integrator;
-      for(auto p: pings_by_topic[pc.first])
-      {
-        std::vector<float> ranges;
-        for(int i = 0; i < p.second.values().size(); i++)
-          ranges.push_back(i*p.second.binSize());
-        
-        const std::vector<float>* values = &p.second.values();
-        if(ui_.maxValuesCheckBox->isChecked())
-        {
-          if(ui_.reNoiseCheckBox->isChecked())
-          {
-            values = &p.second.maxValuesReNoise();
-            //qDebug() << "max re noise";
-          }
-          else
-          {
-            values = &p.second.maxValues();
-            //qDebug() << "max values";
-          }
-        }
-        else
-        {
-          if(ui_.reNoiseCheckBox->isChecked())
-          {
-            values = &p.second.valuesReNoise();
-            //qDebug() << "values re noise";
-          }
-          else
-          {
-            values = &p.second.values();
-            //qDebug() << "values";
-          }
-        }
-
-        ping_integrator.push_back(*values);
-        if(ping_integrator.size() > integration_count)
-          ping_integrator.pop_front();
-
-        for(int i = 0; i < values->size(); i++)
-        {
-          auto range = i*p.second.binSize();
-          double sum = 0.0;
-          int count = 0;
-          for(auto &vals: ping_integrator)
-            if(vals.size() > i)
-            {
-              sum += vals[i];
-              count++;
-            }
-          echogram.scanLine(i)[ping_count] = std::max(0, std::min(254,int(255*((sum/double(count))-min_db)/(max_db-min_db))));
-        }
-        ping_count++;
-      }
-      pixmap_item_ = scene_->addPixmap(QPixmap::fromImage(echogram));
-
-      float grid_spacing = 100.0/pings_by_topic[pc.first].begin()->second.binSize();
-      QPen line_pen(Qt::red, 0, Qt::DotLine);
-
-      for(float y = grid_spacing; y <= echogram.height(); y += grid_spacing)
-        scene_->addLine(0.0, y, echogram.width(), y, line_pen);
-
-      adjustScale();
-      break;
+      auto range = i*p->binSize();
+      echogram.scanLine(i)[ping_number] = std::max(0, std::min(254,int(255*((values->at(i)-min_db)/(max_db-min_db)))));
     }
+    ping_number++;
   }
-  display_max_db_ = max_db;
-  display_min_db_ = min_db;
-  use_max_ = ui_.maxValuesCheckBox->isChecked();
-  use_re_noise_ = ui_.reNoiseCheckBox->isChecked();
-  display_integration_count_ = integration_count;
-  display_channel_ = channel;
+  pixmap_item_ = scene_->addPixmap(QPixmap::fromImage(echogram));
+
+  float grid_spacing = depth_lines_spacing/tracker->second->binSize();
+  QPen line_pen(Qt::red, 0, Qt::DotLine);
+
+  for(float y = grid_spacing; y <= echogram.height(); y += grid_spacing)
+    scene_->addLine(0.0, y, echogram.width(), y, line_pen);
+
+  adjustScale();
 
   getSlices();
 }
 
-void MainWindow::getSlices()
+void MainWindow::updateSlices()
 {
-  std::string channel = ui_.channelComboBox->currentText().toStdString();
-  auto pings = pings_by_topic.find(channel);
-  if(pings == pings_by_topic.end())
-    return;
+  bool need_update = false;
 
-  QPen slice_pen(QColor(0, 255, 0, 128), 0.5);
-  int ping_number = 0;
-  for(const auto& ping: pings->second)
+  bool ok;
+  float value = ui_.sliceMinDbLineEdit->text().toFloat(&ok);
+  if(ok && value != minimum_level_)
   {
-    const auto& slices = ping.second.slices();
-    for(const auto& slice: slices)
-    {
-      scene_->addLine(ping_number+.5, slice.begin()/ping.second.binSize(), ping_number+.5, slice.end()/ping.second.binSize(), slice_pen);
-
-    }
-
-    ping_number++;
+    for(auto tracker: trackers_by_channel_)
+      tracker.second->setLayerMinimumLevel(value);
+    minimum_level_ =  value;
+    need_update = true;
   }
 
+  value = ui_.minDepthLineEdit->text().toFloat(&ok);
+  if(ok && value != minimum_depth_)
+  {
+    for(auto tracker: trackers_by_channel_)
+      tracker.second->setLayerMinimumDepth(value);
+    minimum_depth_ =  value;
+    need_update = true;
+  }
+
+  value = ui_.maxDepthLineEdit->text().toFloat(&ok);
+  if(ok && value != maximum_depth_)
+  {
+    for(auto tracker: trackers_by_channel_)
+      tracker.second->setLayerMaximumDepth(value);
+    maximum_depth_ =  value;
+    need_update = true;
+  }
+
+  value = ui_.minSizeLineEdit->text().toFloat(&ok);
+  if(ok && value != minimum_size_)
+  {
+    for(auto tracker: trackers_by_channel_)
+      tracker.second->setLayerMinimumSize(value);
+    minimum_size_ =  value;
+    need_update = true;
+  }
+
+  value = ui_.maxSizeLineEdit->text().toFloat(&ok);
+  if(ok && value != maximum_size_)
+  {
+    for(auto tracker: trackers_by_channel_)
+      tracker.second->setLayerMaximumSize(value);
+    maximum_size_ =  value;
+    need_update = true;
+  }
+
+  if(need_update)
+    updateEchogram();
+}
+
+void MainWindow::getSlices()
+{
+  if(drawing_slices_)
+  {
+    restart_slice_drawing_ = true;
+    return;
+  }
+
+  while(!drawing_slices_ || restart_slice_drawing_)
+  {
+    drawing_slices_ = true;
+    restart_slice_drawing_ = false;
+
+    std::string channel = ui_.channelComboBox->currentText().toStdString();
+    auto tracker = trackers_by_channel_.find(channel);
+    if(tracker == trackers_by_channel_.end())
+      return;
+
+    float alpha = 0.5;
+    float width = 0.25;
+    bool ok;
+    float value = ui_.sliceAlphaLineEdit->text().toFloat(&ok);
+    if(ok)
+      alpha = value;
+    value = ui_.sliceWidthLineEdit->text().toFloat(&ok);
+    if(ok)
+      width = value;
+
+    std::map<ros::Time, int> ping_time_to_index;
+
+    QPen slice_pen(QColor(0, 255, 0, 255*alpha), width);
+
+    int ping_number = 0;
+    auto bin_size = tracker->second->binSize();
+    for(auto ping: tracker->second->pings())
+    {
+      ping_time_to_index[ping->timestamp()] = ping_number;
+      auto slices = tracker->second->slices(ping->timestamp());
+      for(const auto& slice: slices)
+      {
+        scene_->addLine(ping_number+.5, 0.5+(slice.minimumDepth()/bin_size), ping_number+.5, (slice.maximumDepth()/bin_size)-0.5, slice_pen);
+      }
+      qApp->processEvents();
+      if(restart_slice_drawing_)
+        break;
+      ping_number++;
+    }
+
+
+    QPen layer_pen(QColor(0, 0, 255, 255*alpha), width*.5);
+    QBrush layer_brush(QColor(0, 0, 255, 255*alpha*.25), Qt::SolidPattern);
+    QPen layer_pen_low(QColor(0, 128, 128, 255*alpha), width*.5);
+    QBrush layer_brush_low(QColor(0, 128, 128, 255*alpha*.25), Qt::SolidPattern);
+
+
+    for(const auto& layer: tracker->second->getLayers())
+    {
+      auto depths = layer.depthRangesByTime();
+      if(!depths.empty())
+      {
+        QPolygonF polygon;
+        auto iterator = depths.begin();
+        while(iterator != depths.end())
+        {
+          auto next = iterator;
+          next++;
+          if (next != depths.end())
+          {
+            float x1 = ping_time_to_index[iterator->first]+.5;
+            float x2 = ping_time_to_index[next->first]+.5;
+            polygon.push_back(QPointF(x1, iterator->second.second/bin_size));
+            polygon.push_back(QPointF(x2, next->second.second/bin_size));
+          }
+          iterator = next;
+        }
+
+        auto riterator = depths.rbegin();
+        while(riterator != depths.rend())
+        {
+          auto next = riterator;
+          next++;
+          if (next != depths.rend())
+          {
+            float x1 = ping_time_to_index[riterator->first]+.5;
+            float x2 = ping_time_to_index[next->first]+.5;
+            polygon.push_back(QPointF(x1, riterator->second.first/bin_size));
+            polygon.push_back(QPointF(x2, next->second.first/bin_size));
+          }
+          riterator = next;
+        }
+        if(layer.averageDB() > minimum_level_)
+          scene_->addPolygon(polygon, layer_pen, layer_brush);
+        else
+          scene_->addPolygon(polygon, layer_pen_low, layer_brush_low);
+      }
+    }
+    
+  }
+  drawing_slices_ = false;
 }
 
 } // namespace layer_tracker

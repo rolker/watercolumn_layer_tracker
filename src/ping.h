@@ -3,39 +3,34 @@
 
 #include "marine_acoustic_msgs/RawSonarImage.h"
 
-#include "slice.h"
-
 namespace layer_tracker
 {
-  class Ping
-  {
-    public:
-      Ping();
-      Ping(const marine_acoustic_msgs::RawSonarImage& message, float bin_size);
 
-      const std::vector<float>& values() const;
-      const std::vector<float>& maxValues() const;
-      const std::vector<float>& valuesReNoise() const;
-      const std::vector<float>& maxValuesReNoise() const;
+class Ping
+{
+public:
+  Ping(const marine_acoustic_msgs::RawSonarImage& message, float bin_size);
 
-      float binSize() const;
+  ros::Time timestamp() const;
+  
+  /// Returns the binned samples
+  const std::vector<float>& values() const;
 
-      /// Find slices in a ping. min_db is minimum average db above noise for a valid slice. min_size and max_size are size bounds in meters of a slice.
-      const std::vector<Slice>& extractSlices(float min_db = 3, float min_size = 1.0, float max_size = 50.0);
+  /// @brief Get the samples relative to a quadratic approximation of the background level.
+  /// @return Vector of binned samples relative to the approximated background level.
+  const std::vector<float>& valuesReBackground() const;
 
-      const std::vector<Slice>& slices() const;
+  float binSize() const;
 
-    private:
-      /// size in meters of bins
-      float bin_size_;
+private:
+  ros::Time timestamp_;
 
-      std::vector<float> values_;
-      std::vector<float> max_values_;
-      std::vector<float> values_re_noise_;
-      std::vector<float> max_values_re_noise_;
+  /// size in meters of sample bins
+  float bin_size_;
 
-      std::vector<Slice> slices_;
-  };
+  std::vector<float> values_;
+  std::vector<float> values_re_background_;
+};
 
 } // namepsace layer_tracker
 

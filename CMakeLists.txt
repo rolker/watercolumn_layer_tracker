@@ -32,10 +32,12 @@ else()
 endif(Qt5Widgets_FOUND)
 
 set(SOURCES
+    src/layer.cpp
     src/main.cpp
     src/mainwindow.cpp
     src/ping.cpp
     src/slice.cpp
+    src/tracker.cpp
 )
 
 set(HEADERS

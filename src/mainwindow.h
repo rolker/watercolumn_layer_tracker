@@ -3,7 +3,7 @@
 
 #include <QMainWindow>
 #include "ui_layertrackermainwindow.h"
-#include "ping.h"
+#include "tracker.h"
 
 namespace layer_tracker
 {
@@ -18,12 +18,14 @@ public:
 
   void resizeEvent(QResizeEvent* event) override;
 
-
 public slots:
   void openBags(const std::vector<QString> &fnames);
   void adjustScale();
   void updateEchogram();
   void getSlices();
+  void updateSlices();
+  void setParametersChanged();
+  void UpdateEchogramIfParametersChanged();
 
 private slots:
   void on_actionOpen_triggered();
@@ -33,15 +35,19 @@ private:
   QGraphicsScene* scene_ = nullptr;
   QGraphicsPixmapItem* pixmap_item_ = nullptr;
 
-  using Pings = std::map<ros::Time, Ping>;
-  std::map<std::string, Pings> pings_by_topic;
+  std::map<std::string, std::shared_ptr<Tracker> > trackers_by_channel_;
 
-  float display_min_db_ = 0.0;
-  float display_max_db_ = 0.0;
-  bool use_max_ = false;
-  bool use_re_noise_ = false;
-  int display_integration_count_ = 0;
-  std::string display_channel_;
+  bool drawing_slices_ = false;
+  bool restart_slice_drawing_ = false;
+
+  bool parameters_changed_ = false;
+
+  float bin_size_ = 0.25;
+  float minimum_level_ = 0.0;
+  float minimum_depth_ = 5.0;
+  float maximum_depth_ = 500.0;
+  float minimum_size_ = 1.0;
+  float maximum_size_ = 25.0;
 };
 
 } // namespace layer_tracker

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>788</width>
-    <height>411</height>
+    <width>1771</width>
+    <height>588</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -26,13 +26,6 @@
       </item>
       <item>
        <widget class="QComboBox" name="channelComboBox"/>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="maxValuesCheckBox">
-        <property name="text">
-         <string>Max values</string>
-        </property>
-       </widget>
       </item>
       <item>
        <widget class="QCheckBox" name="reNoiseCheckBox">
@@ -70,17 +63,133 @@
        </widget>
       </item>
       <item>
-       <widget class="QLabel" name="integrationCountLabel">
+       <widget class="QLabel" name="depthLinesSpacingLabel">
         <property name="text">
-         <string>Integration Count</string>
+         <string>Depth Marker Spacing</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QLineEdit" name="integrationCountLineEdit">
+       <widget class="QLineEdit" name="depthLinesSpacingLineEdit">
         <property name="text">
-         <string>1</string>
+         <string>100</string>
         </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="sliceGroupBox">
+        <property name="title">
+         <string>Slice</string>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <item>
+          <widget class="QLabel" name="sliceAlphaLabel">
+           <property name="text">
+            <string>Alpha</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="sliceAlphaLineEdit">
+           <property name="text">
+            <string>0.5</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="sliceWidthLabel">
+           <property name="text">
+            <string>Width</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="sliceWidthLineEdit">
+           <property name="text">
+            <string>0.25</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="sliceMinDbLabel">
+           <property name="text">
+            <string>Min dB</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="sliceMinDbLineEdit">
+           <property name="text">
+            <string>1.0</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="layerGroupBox">
+        <property name="title">
+         <string>Layer</string>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <item>
+          <widget class="QLabel" name="minSizeLabel">
+           <property name="text">
+            <string>Min Size</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="minSizeLineEdit">
+           <property name="text">
+            <string>1</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="maxSizeLabel">
+           <property name="text">
+            <string>Max Size</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="maxSizeLineEdit">
+           <property name="text">
+            <string>25</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="minDepthLabel">
+           <property name="text">
+            <string>Min Depth</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="minDepthLineEdit">
+           <property name="text">
+            <string>5</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="maxDepthLabel">
+           <property name="text">
+            <string>Max Depth</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="maxDepthLineEdit">
+           <property name="text">
+            <string>500</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
      </layout>
@@ -106,13 +215,6 @@
       <item>
        <layout class="QVBoxLayout" name="verticalScaleLayout">
         <item>
-         <widget class="QLabel" name="minDepthLabel">
-          <property name="text">
-           <string>meters</string>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QSlider" name="verticalScaleVerticalSlider">
           <property name="minimum">
            <number>1</number>
@@ -131,13 +233,6 @@
           </property>
          </widget>
         </item>
-        <item>
-         <widget class="QLabel" name="maxDepthLabel">
-          <property name="text">
-           <string>meters</string>
-          </property>
-         </widget>
-        </item>
        </layout>
       </item>
       <item>
@@ -152,7 +247,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>788</width>
+     <width>1771</width>
      <height>22</height>
     </rect>
    </property>

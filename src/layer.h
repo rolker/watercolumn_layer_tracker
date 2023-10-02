@@ -14,8 +14,10 @@ public:
   /// Layer's average dB level
   float averageDB() const;
 
+  float totalDB() const;
+
   /// Scores the suitability of a slice to join the layer
-  float potentialScore(const Slice &candidate_slice, ros::Time earliest_considered) const;
+  float potentialScore(const Slice &candidate_slice, ros::Time earliest_considered, ros::Time minimum_start_time) const;
 
   void addSlice(const Slice &slice);
 

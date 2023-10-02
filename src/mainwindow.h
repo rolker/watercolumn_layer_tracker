@@ -51,6 +51,7 @@ private:
   float maximum_depth_ = 500.0;
   float minimum_size_ = 1.0;
   float maximum_size_ = 25.0;
+  float maximum_layer_duration_ = 30.0;
 };
 
 } // namespace layer_tracker

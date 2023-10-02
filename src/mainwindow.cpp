@@ -45,6 +45,7 @@ MainWindow::MainWindow(int &argc, char ** argv, QWidget *parent) :QMainWindow(pa
   connect(ui_.maxSizeLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateSlices);
   connect(ui_.minDepthLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateSlices);
   connect(ui_.maxDepthLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateSlices);
+  connect(ui_.maxDurationLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateSlices);
 
   connect(ui_.rosTopicLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateROS);
   connect(ui_.rosTopicEnabledCheckBox, &QCheckBox::stateChanged, this, &MainWindow::updateROS);
@@ -257,6 +258,16 @@ void MainWindow::updateSlices()
       tracker.second->setLayerMaximumSize(value);
     maximum_size_ =  value;
     need_update = true;
+  }
+
+  value = ui_.maxDurationLineEdit->text().toFloat(&ok);
+  if(ok && value != maximum_layer_duration_)
+  {
+    for(auto tracker: trackers_by_channel_)
+      tracker.second->setLayerMaximumDuration(ros::Duration(value));
+    maximum_layer_duration_ = value;
+    need_update = true;
+
   }
 
   if(need_update)

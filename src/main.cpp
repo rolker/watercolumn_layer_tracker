@@ -5,7 +5,7 @@
 int main(int argc, char *argv[])
 {
   QApplication a(argc, argv);
-  layer_tracker::MainWindow w;
+  layer_tracker::MainWindow w(argc, argv);
   w.show();
 
   std::vector<QString> fnames;

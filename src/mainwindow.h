@@ -3,7 +3,7 @@
 
 #include <QMainWindow>
 #include "ui_layertrackermainwindow.h"
-#include "tracker.h"
+#include "tracker_node.h"
 
 namespace layer_tracker
 {
@@ -13,7 +13,7 @@ class MainWindow : public QMainWindow
   Q_OBJECT
 
 public:
-  explicit MainWindow(QWidget *parent = 0);
+  explicit MainWindow(int &argc, char ** argv, QWidget *parent = 0);
   ~MainWindow();
 
   void resizeEvent(QResizeEvent* event) override;
@@ -25,7 +25,8 @@ public slots:
   void getSlices();
   void updateSlices();
   void setParametersChanged();
-  void UpdateEchogramIfParametersChanged();
+  void updateEchogramIfParametersChanged();
+  void updateROS();
 
 private slots:
   void on_actionOpen_triggered();
@@ -36,6 +37,8 @@ private:
   QGraphicsPixmapItem* pixmap_item_ = nullptr;
 
   std::map<std::string, std::shared_ptr<Tracker> > trackers_by_channel_;
+
+  std::shared_ptr<TrackerNode> tracker_node_;
 
   bool drawing_slices_ = false;
   bool restart_slice_drawing_ = false;

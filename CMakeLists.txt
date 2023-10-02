@@ -38,6 +38,7 @@ set(SOURCES
     src/ping.cpp
     src/slice.cpp
     src/tracker.cpp
+    src/tracker_node.cpp
 )
 
 set(HEADERS

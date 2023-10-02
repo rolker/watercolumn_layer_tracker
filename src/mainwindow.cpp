@@ -11,7 +11,7 @@
 namespace layer_tracker
 {
 
-MainWindow::MainWindow(QWidget *parent) :QMainWindow(parent)
+MainWindow::MainWindow(int &argc, char ** argv, QWidget *parent) :QMainWindow(parent)
 {
   ui_.setupUi(this);
   scene_ = new QGraphicsScene(this);
@@ -20,19 +20,19 @@ MainWindow::MainWindow(QWidget *parent) :QMainWindow(parent)
   connect(ui_.horizontalScaleHorizontalSlider, &QSlider::valueChanged, this, &MainWindow::adjustScale);
   connect(ui_.verticalScaleVerticalSlider, &QSlider::valueChanged, this, &MainWindow::adjustScale);
 
-  connect(ui_.minDbLineEdit, &QLineEdit::editingFinished, this, &MainWindow::UpdateEchogramIfParametersChanged);
+  connect(ui_.minDbLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateEchogramIfParametersChanged);
   connect(ui_.minDbLineEdit, &QLineEdit::textChanged, this, &MainWindow::setParametersChanged);
 
-  connect(ui_.maxDbLineEdit, &QLineEdit::editingFinished, this, &MainWindow::UpdateEchogramIfParametersChanged);
+  connect(ui_.maxDbLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateEchogramIfParametersChanged);
   connect(ui_.maxDbLineEdit, &QLineEdit::textChanged, this, &MainWindow::setParametersChanged);
 
-  connect(ui_.depthLinesSpacingLineEdit, &QLineEdit::editingFinished, this, &MainWindow::UpdateEchogramIfParametersChanged);
+  connect(ui_.depthLinesSpacingLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateEchogramIfParametersChanged);
   connect(ui_.depthLinesSpacingLineEdit, &QLineEdit::textChanged, this, &MainWindow::setParametersChanged);
 
-  connect(ui_.sliceAlphaLineEdit, &QLineEdit::editingFinished, this, &MainWindow::UpdateEchogramIfParametersChanged);
+  connect(ui_.sliceAlphaLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateEchogramIfParametersChanged);
   connect(ui_.sliceAlphaLineEdit, &QLineEdit::textChanged, this, &MainWindow::setParametersChanged);
 
-  connect(ui_.sliceWidthLineEdit, &QLineEdit::editingFinished, this, &MainWindow::UpdateEchogramIfParametersChanged);
+  connect(ui_.sliceWidthLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateEchogramIfParametersChanged);
   connect(ui_.sliceWidthLineEdit, &QLineEdit::textChanged, this, &MainWindow::setParametersChanged);
 
 
@@ -46,6 +46,11 @@ MainWindow::MainWindow(QWidget *parent) :QMainWindow(parent)
   connect(ui_.minDepthLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateSlices);
   connect(ui_.maxDepthLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateSlices);
 
+  connect(ui_.rosTopicLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateROS);
+  connect(ui_.rosTopicEnabledCheckBox, &QCheckBox::stateChanged, this, &MainWindow::updateROS);
+
+  tracker_node_ = std::make_shared<TrackerNode>(argc, argv);
+  ui_.channelComboBox->insertItem(0, "ROS");
 }
 
 MainWindow::~MainWindow()
@@ -122,7 +127,7 @@ void MainWindow::setParametersChanged()
   parameters_changed_ = true;
 }
 
-void MainWindow::UpdateEchogramIfParametersChanged()
+void MainWindow::updateEchogramIfParametersChanged()
 {
   if(parameters_changed_)
   {
@@ -147,17 +152,25 @@ void MainWindow::updateEchogram()
   if(ok && value > 0)
     depth_lines_spacing = value;
 
-  std::string channel = ui_.channelComboBox->currentText().toStdString();
 
   scene_->clear();
   pixmap_item_ = nullptr;
 
   uint32_t max_height = 0;
-  auto tracker = trackers_by_channel_.find(channel);
-  if(tracker == trackers_by_channel_.end())
-    return;
 
-  auto pings = tracker->second->pings();
+  std::string channel = ui_.channelComboBox->currentText().toStdString();
+  std::shared_ptr<Tracker> tracker;
+  if (channel == "ROS")
+    tracker = tracker_node_->tracker();
+  else
+  {
+    auto tracker_iterator = trackers_by_channel_.find(channel);
+    if(tracker_iterator == trackers_by_channel_.end())
+      return;
+
+    tracker = tracker_iterator->second;
+  }
+  auto pings = tracker->pings();
   for(const auto &p: pings)
     max_height = std::max<uint32_t>(max_height, p->values().size());
   uint32_t ping_count = pings.size();
@@ -185,7 +198,7 @@ void MainWindow::updateEchogram()
   }
   pixmap_item_ = scene_->addPixmap(QPixmap::fromImage(echogram));
 
-  float grid_spacing = depth_lines_spacing/tracker->second->binSize();
+  float grid_spacing = depth_lines_spacing/tracker->binSize();
   QPen line_pen(Qt::red, 0, Qt::DotLine);
 
   for(float y = grid_spacing; y <= echogram.height(); y += grid_spacing)
@@ -264,9 +277,17 @@ void MainWindow::getSlices()
     restart_slice_drawing_ = false;
 
     std::string channel = ui_.channelComboBox->currentText().toStdString();
-    auto tracker = trackers_by_channel_.find(channel);
-    if(tracker == trackers_by_channel_.end())
-      return;
+    std::shared_ptr<Tracker> tracker;
+    if (channel == "ROS")
+      tracker = tracker_node_->tracker();
+    else
+    {
+      auto tracker_iterator = trackers_by_channel_.find(channel);
+      if(tracker_iterator == trackers_by_channel_.end())
+        return;
+
+      tracker = tracker_iterator->second;
+    }
 
     float alpha = 0.5;
     float width = 0.25;
@@ -283,11 +304,11 @@ void MainWindow::getSlices()
     QPen slice_pen(QColor(0, 255, 0, 255*alpha), width);
 
     int ping_number = 0;
-    auto bin_size = tracker->second->binSize();
-    for(auto ping: tracker->second->pings())
+    auto bin_size = tracker->binSize();
+    for(auto ping: tracker->pings())
     {
       ping_time_to_index[ping->timestamp()] = ping_number;
-      auto slices = tracker->second->slices(ping->timestamp());
+      auto slices = tracker->slices(ping->timestamp());
       for(const auto& slice: slices)
       {
         scene_->addLine(ping_number+.5, 0.5+(slice.minimumDepth()/bin_size), ping_number+.5, (slice.maximumDepth()/bin_size)-0.5, slice_pen);
@@ -305,7 +326,7 @@ void MainWindow::getSlices()
     QBrush layer_brush_low(QColor(0, 128, 128, 255*alpha*.25), Qt::SolidPattern);
 
 
-    for(const auto& layer: tracker->second->getLayers())
+    for(const auto& layer: tracker->getLayers())
     {
       auto depths = layer.depthRangesByTime();
       if(!depths.empty())
@@ -349,6 +370,16 @@ void MainWindow::getSlices()
     
   }
   drawing_slices_ = false;
+}
+
+//todo, call ros spin once
+
+void MainWindow::updateROS()
+{
+  if(ui_.rosTopicEnabledCheckBox->isChecked())
+    tracker_node_->setTopic(ui_.rosTopicLineEdit->text().toStdString());
+  else
+    tracker_node_->setTopic("");
 }
 
 } // namespace layer_tracker

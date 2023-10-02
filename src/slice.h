@@ -25,6 +25,7 @@ public:
   float depthRange() const;
 
   const float& averageDB() const;
+  float totalDB() const;
 
   float score() const;
   bool operator<(const Slice &other) const;

@@ -189,6 +189,20 @@
            </property>
           </widget>
          </item>
+         <item>
+          <widget class="QLabel" name="maxDurationLabel">
+           <property name="text">
+            <string>Max Duration</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="maxDurationLineEdit">
+           <property name="text">
+            <string>30</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </widget>
       </item>

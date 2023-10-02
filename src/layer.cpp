@@ -24,10 +24,25 @@ float Layer::averageDB() const
   return sum/weights;
 }
 
-float Layer::potentialScore(const Slice &candidate_slice, ros::Time earliest_considered) const
+float Layer::totalDB() const
+{
+  if(slices_.empty())
+    return 0.0;
+  double sum = 0.0;
+
+  for(auto &meta_slice: meta_slices_)
+    sum += meta_slice.second.totalDB();
+  return sum;
+}
+
+
+float Layer::potentialScore(const Slice &candidate_slice, ros::Time earliest_considered, ros::Time minimum_start_time) const
 {
   if(slices_.empty())
     return 1.0;
+
+  if(slices_.begin()->first < minimum_start_time)
+    return 0.0;
 
   // calculate an average slice from recent pings
   double min_sum = 0.0;

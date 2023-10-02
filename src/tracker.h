@@ -29,6 +29,7 @@ public:
   void setLayerMaximumDepth(float maximum_depth);
   void setLayerMinimumSize(float minimum_size);
   void setLayerMaximumSize(float maximum_size);
+  void setLayerMaximumDuration(ros::Duration maximum_duration);
 
   std::vector<Layer> getLayers();
   std::vector<Layer> getCurrentLayers();
@@ -62,6 +63,8 @@ private:
 
   std::vector<Layer> layers_;
   ros::Duration maximum_layer_gap_ = ros::Duration(10.0);
+
+  ros::Duration maximum_layer_duration_ = ros::Duration(30.0);
 };
 
 } // namespace layer_tracker

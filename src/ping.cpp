@@ -1,7 +1,6 @@
 #include "ping.h"
 
 #include "PolynomialRegression.h"
-#include <QDebug>
 
 namespace layer_tracker
 {

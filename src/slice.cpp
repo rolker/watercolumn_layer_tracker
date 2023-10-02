@@ -52,9 +52,14 @@ const float &Slice::averageDB() const
   return average_db_;
 }
 
-float Slice::score() const
+float Slice::totalDB() const
 {
   return average_db_*depthRange();
+}
+
+float Slice::score() const
+{
+  return totalDB();
 }
 
 bool Slice::operator<(const Slice& other) const

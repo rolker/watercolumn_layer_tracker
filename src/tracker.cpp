@@ -80,6 +80,13 @@ void Tracker::setLayerMaximumSize(float maximum_size)
   layers_.clear();
 }
 
+void Tracker::setLayerMaximumDuration(ros::Duration maximum_duration)
+{
+  maximum_layer_duration_ = maximum_duration;
+  slices_by_time_.clear();
+  layers_.clear();
+}
+
 void Tracker::extractSlices(ros::Time timestamp)
 {
   auto ping_iterator = pings_by_time_.find(timestamp);
@@ -161,7 +168,7 @@ void Tracker::updateLayers(ros::Time timestamp)
       // is it a current layer, which has a slice within gap time?
       if( (timestamp-layer.endTime()) < maximum_layer_gap_)
       {
-        auto layer_score = layer.potentialScore(slice, timestamp-maximum_layer_gap_);
+        auto layer_score = layer.potentialScore(slice, timestamp-maximum_layer_gap_, timestamp-maximum_layer_duration_);
         if(layer_score > best_layer_score)
         {
           best_layer = i;

@@ -5,6 +5,7 @@ add_compile_options(-std=c++14)
 
 find_package(catkin REQUIRED COMPONENTS
     marine_acoustic_msgs
+    project11_msgs
     rosbag
     roscpp
     rqt_gui
@@ -53,3 +54,20 @@ qt5_use_modules(watercolumn_layer_tracker Widgets)
 target_link_libraries(watercolumn_layer_tracker ${QT_LIBRARIES} ${catkin_LIBRARIES})
 
 INSTALL(TARGETS watercolumn_layer_tracker RUNTIME DESTINATION bin)
+
+set(NODE_SOURCES
+    src/layer.cpp
+    src/ping.cpp
+    src/slice.cpp
+    src/tracker.cpp
+    src/tracker_node.cpp
+)
+
+
+add_executable(tracker_node ${NODE_SOURCES})
+
+add_dependencies(tracker_node ${catkin_EXPORTED_TARGETS})
+
+target_link_libraries(tracker_node ${catkin_LIBRARIES})
+
+INSTALL(TARGETS tracker_node RUNTIME DESTINATION bin)

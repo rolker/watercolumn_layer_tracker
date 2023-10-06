@@ -7,6 +7,7 @@
 #include <QGraphicsPixmapItem>
 #include <QDateTime>
 #include <QDebug>
+#include <QTimer>
 
 namespace layer_tracker
 {
@@ -384,11 +385,24 @@ void MainWindow::getSlices()
 }
 
 //todo, call ros spin once
+void MainWindow::rosSpinOnce()
+{
+  if(ui_.rosTopicEnabledCheckBox->isEnabled())
+  {
+    ros::spinOnce();
+    updateEchogram();
+    QTimer::singleShot(500, this, &MainWindow::rosSpinOnce);
+  }
+  
+}
 
 void MainWindow::updateROS()
 {
   if(ui_.rosTopicEnabledCheckBox->isChecked())
+  {
     tracker_node_->setTopic(ui_.rosTopicLineEdit->text().toStdString());
+    rosSpinOnce();
+  }
   else
     tracker_node_->setTopic("");
 }

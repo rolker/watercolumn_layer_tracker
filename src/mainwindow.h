@@ -27,6 +27,7 @@ public slots:
   void setParametersChanged();
   void updateEchogramIfParametersChanged();
   void updateROS();
+  void rosSpinOnce();
 
 private slots:
   void on_actionOpen_triggered();

@@ -65,10 +65,10 @@ set(NODE_SOURCES
 )
 
 
-add_executable(tracker_node ${NODE_SOURCES})
+# add_executable(tracker_node ${NODE_SOURCES})
 
-add_dependencies(tracker_node ${catkin_EXPORTED_TARGETS})
+# add_dependencies(tracker_node ${catkin_EXPORTED_TARGETS})
 
-target_link_libraries(tracker_node ${catkin_LIBRARIES})
+# target_link_libraries(tracker_node ${catkin_LIBRARIES})
 
-INSTALL(TARGETS tracker_node RUNTIME DESTINATION bin)
+# INSTALL(TARGETS tracker_node RUNTIME DESTINATION bin)

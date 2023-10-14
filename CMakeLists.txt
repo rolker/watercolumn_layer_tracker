@@ -65,10 +65,15 @@ set(NODE_SOURCES
 )
 
 
-# add_executable(tracker_node ${NODE_SOURCES})
+set (SINGLE_LAYER_TRACKER_SOURCES
+    src/single_layer_tracker.cpp
+)
 
-# add_dependencies(tracker_node ${catkin_EXPORTED_TARGETS})
 
-# target_link_libraries(tracker_node ${catkin_LIBRARIES})
+add_executable(single_layer_tracker ${SINGLE_LAYER_TRACKER_SOURCES})
 
-# INSTALL(TARGETS tracker_node RUNTIME DESTINATION bin)
+add_dependencies(single_layer_tracker ${catkin_EXPORTED_TARGETS})
+
+target_link_libraries(single_layer_tracker ${catkin_LIBRARIES})
+
+INSTALL(TARGETS single_layer_tracker RUNTIME DESTINATION bin)

@@ -42,9 +42,21 @@
        </widget>
       </item>
       <item>
-       <widget class="QLineEdit" name="minDbLineEdit">
-        <property name="text">
-         <string>-100</string>
+       <widget class="QDoubleSpinBox" name="minDbDoubleSpinBox">
+        <property name="decimals">
+         <number>1</number>
+        </property>
+        <property name="minimum">
+         <double>-200.000000000000000</double>
+        </property>
+        <property name="maximum">
+         <double>100.000000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>0.500000000000000</double>
+        </property>
+        <property name="value">
+         <double>-100.000000000000000</double>
         </property>
        </widget>
       </item>
@@ -56,9 +68,18 @@
        </widget>
       </item>
       <item>
-       <widget class="QLineEdit" name="maxDbLineEdit">
-        <property name="text">
-         <string>10</string>
+       <widget class="QDoubleSpinBox" name="maxDbDoubleSpinBox">
+        <property name="decimals">
+         <number>1</number>
+        </property>
+        <property name="minimum">
+         <double>-200.000000000000000</double>
+        </property>
+        <property name="singleStep">
+         <double>0.500000000000000</double>
+        </property>
+        <property name="value">
+         <double>10.000000000000000</double>
         </property>
        </widget>
       </item>

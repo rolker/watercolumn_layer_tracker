@@ -21,11 +21,11 @@ MainWindow::MainWindow(int &argc, char ** argv, QWidget *parent) :QMainWindow(pa
   connect(ui_.horizontalScaleHorizontalSlider, &QSlider::valueChanged, this, &MainWindow::adjustScale);
   connect(ui_.verticalScaleVerticalSlider, &QSlider::valueChanged, this, &MainWindow::adjustScale);
 
-  connect(ui_.minDbLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateEchogramIfParametersChanged);
-  connect(ui_.minDbLineEdit, &QLineEdit::textChanged, this, &MainWindow::setParametersChanged);
+  connect(ui_.minDbDoubleSpinBox, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &MainWindow::updateEchogram);
+  //connect(ui_.minDbLineEdit, &QLineEdit::textChanged, this, &MainWindow::setParametersChanged);
 
-  connect(ui_.maxDbLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateEchogramIfParametersChanged);
-  connect(ui_.maxDbLineEdit, &QLineEdit::textChanged, this, &MainWindow::setParametersChanged);
+  connect(ui_.maxDbDoubleSpinBox, qOverload<double>(&QDoubleSpinBox::valueChanged), this, &MainWindow::updateEchogram);
+  //connect(ui_.maxDbLineEdit, &QLineEdit::textChanged, this, &MainWindow::setParametersChanged);
 
   connect(ui_.depthLinesSpacingLineEdit, &QLineEdit::editingFinished, this, &MainWindow::updateEchogramIfParametersChanged);
   connect(ui_.depthLinesSpacingLineEdit, &QLineEdit::textChanged, this, &MainWindow::setParametersChanged);
@@ -140,17 +140,12 @@ void MainWindow::updateEchogramIfParametersChanged()
 
 void MainWindow::updateEchogram()
 {
-  float min_db = -100.0;
-  float max_db = 10.0;
+  float min_db = ui_.minDbDoubleSpinBox->value();
+  float max_db = ui_.maxDbDoubleSpinBox->value();
+
   float depth_lines_spacing = 100.0;
   bool ok;
-  float value = ui_.minDbLineEdit->text().toFloat(&ok);
-  if(ok)
-    min_db = value;
-  value = ui_.maxDbLineEdit->text().toFloat(&ok);
-  if(ok)
-    max_db = value;
-  value = ui_.depthLinesSpacingLineEdit->text().toFloat();
+  float value = ui_.depthLinesSpacingLineEdit->text().toFloat();
   if(ok && value > 0)
     depth_lines_spacing = value;
 
@@ -177,12 +172,15 @@ void MainWindow::updateEchogram()
     max_height = std::max<uint32_t>(max_height, p->values().size());
   uint32_t ping_count = pings.size();
   
-  qDebug() << channel.c_str() << ping_count << "x" << max_height;
-  QImage echogram(ping_count, max_height, QImage::Format_Grayscale8);
+  // qDebug() << channel.c_str() << ping_count << "x" << max_height;
+  QImage echogram(maximum_ping_count_, max_height, QImage::Format_Grayscale8);
   echogram.fill(Qt::black);
-  uint32_t ping_number = 0;
-  for(auto p: pings)
+  uint32_t ping_start = 0;
+  if (ping_count > maximum_ping_count_)
+    ping_start = ping_count - maximum_ping_count_;
+  for(uint32_t ping_number = ping_start; ping_number < ping_count; ping_number++)
   {
+    auto p = pings[ping_number];
     std::vector<float> ranges;
     for(int i = 0; i < p->values().size(); i++)
       ranges.push_back(i*p->binSize());
@@ -194,9 +192,8 @@ void MainWindow::updateEchogram()
     for(int i = 0; i < values->size(); i++)
     {
       auto range = i*p->binSize();
-      echogram.scanLine(i)[ping_number] = std::max(0, std::min(254,int(255*((values->at(i)-min_db)/(max_db-min_db)))));
+      echogram.scanLine(i)[ping_number-ping_start] = std::max(0, std::min(254,int(255*((values->at(i)-min_db)/(max_db-min_db)))));
     }
-    ping_number++;
   }
   pixmap_item_ = scene_->addPixmap(QPixmap::fromImage(echogram));
 
@@ -204,7 +201,10 @@ void MainWindow::updateEchogram()
   QPen line_pen(Qt::red, 0, Qt::DotLine);
 
   for(float y = grid_spacing; y <= echogram.height(); y += grid_spacing)
-    scene_->addLine(0.0, y, echogram.width(), y, line_pen);
+  {
+    scene_->addLine(0.0, y, maximum_ping_count_, y, line_pen);
+    scene_->addSimpleText(QString::number(y*tracker->binSize()))->setPos(QPointF(0,y));
+  }
 
   adjustScale();
 
@@ -320,14 +320,14 @@ void MainWindow::getSlices()
     for(auto ping: tracker->pings())
     {
       ping_time_to_index[ping->timestamp()] = ping_number;
-      auto slices = tracker->slices(ping->timestamp());
-      for(const auto& slice: slices)
-      {
-        scene_->addLine(ping_number+.5, 0.5+(slice.minimumDepth()/bin_size), ping_number+.5, (slice.maximumDepth()/bin_size)-0.5, slice_pen);
-      }
-      qApp->processEvents();
-      if(restart_slice_drawing_)
-        break;
+      // auto slices = tracker->slices(ping->timestamp());
+      // for(const auto& slice: slices)
+      // {
+      //   scene_->addLine(ping_number+.5, 0.5+(slice.minimumDepth()/bin_size), ping_number+.5, (slice.maximumDepth()/bin_size)-0.5, slice_pen);
+      // }
+      // qApp->processEvents();
+      // if(restart_slice_drawing_)
+      //   break;
       ping_number++;
     }
 

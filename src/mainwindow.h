@@ -53,6 +53,8 @@ private:
   float minimum_size_ = 1.0;
   float maximum_size_ = 25.0;
   float maximum_layer_duration_ = 30.0;
+
+  int maximum_ping_count_ = 2048;
 };
 
 } // namespace layer_tracker

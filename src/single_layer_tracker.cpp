@@ -41,7 +41,7 @@ struct Ping
 
 };
 
-float layer_thinkness = 10.0;
+float layer_thickness = 10.0;
 
 void sonarCallback(const marine_acoustic_msgs::RawSonarImage::ConstPtr& message)
 {
@@ -52,8 +52,8 @@ void sonarCallback(const marine_acoustic_msgs::RawSonarImage::ConstPtr& message)
     project11_msgs::AcousticSlice slice;
     slice.header = message->header;
     slice.ping_info = message->ping_info;
-    slice.minimum_range = current_layer_range-layer_thinkness/2.0;
-    slice.maximum_range = current_layer_range+layer_thinkness/2.0;
+    slice.minimum_range = current_layer_range-layer_thickness/2.0;
+    slice.maximum_range = current_layer_range+layer_thickness/2.0;
 
     float floor = 0.0;
     for (float range = slice.minimum_range; range <= slice.maximum_range; range += ping.bin_size)

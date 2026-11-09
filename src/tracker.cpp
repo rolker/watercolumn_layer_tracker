@@ -1,3 +1,6 @@
+// Copyright (c) 2023-2026 Roland Arsenault, Center for Coastal and Ocean Mapping, University of New Hampshire
+// SPDX-License-Identifier: BSD-3-Clause
+
 #include "tracker.h"
 
 namespace layer_tracker
